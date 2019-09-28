@@ -208,6 +208,9 @@ pipeline {
                                 echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
                                 echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
 
+                                # delete non required files which are also present in the kernel package
+                                find "${debian_dir}" -name modules.alias | xargs rm -f
+
                                 # generate debian package
                                 dpkg-deb --build "${debian_dir}"
                             """
