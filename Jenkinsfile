@@ -1,0 +1,289 @@
+// Copyright (C) 2019 VyOS maintainers and contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// in order to easy exprort images built to "external" world
+// it under the terms of the GNU General Public License version 2 or later as
+// published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+@NonCPS
+
+def getGitBranchName() {
+    def branch = scm.branches[0].name
+    return branch.split('/')[-1]
+}
+
+def getGitRepoURL() {
+    return scm.userRemoteConfigs[0].url
+}
+
+def getGitRepoName() {
+    return getGitRepoURL().split('/').last()
+}
+
+// Returns true if this is a custom build launched on any project fork.
+// Returns false if this is build from git@github.com:vyos/<reponame>.
+// <reponame> can be e.g. vyos-1x.git or vyatta-op.git
+def isCustomBuild() {
+    // GitHub organisation base URL
+    def gitURI = 'git@github.com:vyos/' + getGitRepoName()
+    def httpURI = 'https://github.com/vyos/' + getGitRepoName()
+
+    return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
+}
+
+def setDescription() {
+    def item = Jenkins.instance.getItemByFullName(env.JOB_NAME)
+
+    // build up the main description text
+    def description = ""
+    description += "<h2>VyOS individual package build: " + getGitRepoName().replace('.git', '') + "</h2>"
+
+    if (isCustomBuild()) {
+        description += "<p style='border: 3px dashed red; width: 50%;'>"
+        description += "<b>Build not started from official Git repository!</b><br>"
+        description += "<br>"
+        description += "Repository: <font face = 'courier'>" + getGitRepoURL() + "</font><br>"
+        description += "Branch: <font face = 'courier'>" + getGitBranchName() + "</font><br>"
+        description += "</p>"
+    } else {
+        description += "Sources taken from Git branch: <font face = 'courier'>" + getGitBranchName() + "</font><br>"
+    }
+
+    item.setDescription(description)
+    item.save()
+}
+
+//
+// VyOS builds some Intel Out-of-Tree drivers
+// which are defined here
+//
+def IntelMap = [:]
+IntelMap['ixgbe']   = 'https://sourceforge.net/projects/e1000/files/ixgbe%20stable/5.5.5/ixgbe-5.5.5.tar.gz/download'
+IntelMap['igb']     = 'https://sourceforge.net/projects/e1000/files/igb%20stable/5.3.5.22s/igb-5.3.5.22s.tar.gz/download'
+IntelMap['e1000e']  = 'https://sourceforge.net/projects/e1000/files/e1000e%20stable/3.5.1/e1000e-3.5.1.tar.gz/download'
+IntelMap['i40e']    = 'https://sourceforge.net/projects/e1000/files/i40e%20stable/2.9.21/i40e-2.9.21.tar.gz/download'
+IntelMap['ixgbevf'] = 'https://sourceforge.net/projects/e1000/files/ixgbevf%20stable/4.5.3/ixgbevf-4.5.3.tar.gz/download'
+IntelMap['i40evf']  = 'https://sourceforge.net/projects/e1000/files/i40evf%20stable/3.6.15/i40evf-3.6.15.tar.gz/download'
+
+/* Only keep the most recent builds. */
+def projectProperties = [
+    [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '1']],
+]
+
+properties(projectProperties)
+setDescription()
+
+pipeline {
+    agent {
+        docker {
+            args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
+            image 'vyos/vyos-build:current'
+        }
+    }
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 120, unit: 'MINUTES')
+        timestamps()
+    }
+    environment {
+        DEBIAN_ARCH = sh(returnStdout: true, script: 'dpkg --print-architecture').trim()
+    }
+    stages {
+        stage('Git Clone') {
+            parallel {
+                stage('Kernel') {
+                    steps {
+                        dir('linux-kernel') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'v4.19.70' ]],
+                                userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
+                        }
+                    }
+                }
+                stage('WireGuard') {
+                    steps {
+                        dir('wireguard') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'debian/0.0.20190913-1' ]],
+                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
+                        }
+                    }
+                }
+                stage('Accel-PPP') {
+                    steps {
+                        dir('accel-ppp') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: '1.12.0' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/xebd/accel-ppp.git']]])
+                        }
+                    }
+                }
+            }
+        }
+        stage('Compile Kernel') {
+            steps {
+                script {
+                    // Copy __versioned__ Kernel config to Kernel config directory
+                    sh "cp x86_64_vyos_defconfig linux-kernel/arch/x86/configs/"
+
+                    dir('linux-kernel') {
+                        // provide Kernel version as environement variable
+                        env.KERNEL_VERSION = sh(returnStdout: true, script: 'echo $(make kernelversion)').trim()
+                        // provide Kernel version suffix as environment variable
+                        env.KERNEL_SUFFIX = "-${DEBIAN_ARCH}-vyos"
+
+                        sh """
+                            # VyOS requires some small Kernel Patches - apply them here
+                            # It's easier to habe them here and make use of the upstream
+                            # repository instead of maintaining a full Kernel Fork.
+                            # Saving time/resources is essential :-)
+                            PATCH_DIR=${env.WORKSPACE}/patches/kernel
+                            for patch in \$(ls \${PATCH_DIR})
+                            do
+                                echo \${PATCH_DIR}/\${patch}
+                                patch -p1 < \${PATCH_DIR}/\${patch}
+                            done
+
+                            # Select Kernel configuration - currently there is only one
+                            make x86_64_vyos_defconfig
+                        """
+
+                        sh """
+                            # Compile Kernel :-)
+                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${env.KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
+                        """
+                    }
+                }
+            }
+        }
+        stage('Intel Driver(s)') {
+            steps {
+                script {
+                    def build = [:]
+                    IntelMap.each { pkg ->
+                        def driver_name = pkg.key
+                        def driver_url = pkg.value.replace('/download', '')
+                        def driver_filename = driver_url.split('/')[-1]
+                        def driver_dir = driver_filename.replace('.tar.gz', '')
+                        def driver_version = driver_dir.split('-')[-1]
+
+                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-1_${DEBIAN_ARCH}"
+                        def deb_control = "${debian_dir}/DEBIAN/control"
+
+                        build[pkg.key] = {
+                            sh """
+                                curl -L -o "${driver_filename}" "${driver_url}"
+                                if [ "\$?" != "0" ]; then
+                                    exit 1
+                                fi
+
+                                # unpack archive
+                                tar xf "${driver_filename}"
+
+                                # compile module
+                                cd "${env.WORKSPACE}/${driver_dir}/src"
+                                KSRC="${env.WORKSPACE}/linux-kernel" INSTALL_MOD_PATH="${debian_dir}" make -j \$(getconf _NPROCESSORS_ONLN) install
+
+                                mkdir -p \$(dirname "${deb_control}")
+
+                                echo "Package: intel-${driver_name}" > "${deb_control}"
+                                echo "Version: ${driver_version}" >> "${deb_control}"
+                                echo "Section: kernel" >> "${deb_control}"
+                                echo "Priority: extra" >> "${deb_control}"
+                                echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
+                                echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
+                                echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
+
+                                # generate debian package
+                                dpkg-deb --build "${debian_dir}"
+                            """
+                        }
+                    }
+                    parallel build
+                }
+            }
+        }
+        stage('Kernel Module(s)') {
+            parallel {
+                stage('WireGuard') {
+                    steps {
+                        dir('wireguard') {
+                            sh """
+                                # We need some WireGuard patches for building
+                                # It's easier to habe them here and make use of the upstream
+                                # repository instead of maintaining a full Kernel Fork.
+                                # Saving time/resources is essential :-)
+                                PATCH_DIR=${env.WORKSPACE}/patches/wireguard
+                                for patch in \$(ls \${PATCH_DIR})
+                                do
+                                    echo \${PATCH_DIR}/\${patch}
+                                    patch -p1 < \${PATCH_DIR}/\${patch}
+                                done
+
+                                # set debhelper compatibility level
+                                echo "9" > debian/compat
+
+                                # Upstream WireGuard sources depend on debhelper == 12
+                                # we only have 9 so use the '-d' override option which works
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -d
+                            """
+                        }
+                    }
+                }
+                stage('Accel-PPP') {
+                    steps {
+                        dir('accel-ppp/build') {
+                            sh """
+                                cmake -DBUILD_IPOE_DRIVER=TRUE \
+                                    -DBUILD_VLAN_MON_DRIVER=TRUE \
+                                    -DCMAKE_INSTALL_PREFIX=/usr \
+                                    -DKDIR="${env.WORKSPACE}/linux-kernel" \
+                                    -DLUA=TRUE \
+                                    -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
+                                    -DCPACK_TYPE=Debian8 \
+                                    ..
+                                make
+                                cpack -G DEB
+
+                                # rename resulting Debian package according git description
+                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')-1_"${DEBIAN_ARCH}".deb
+                            """
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        cleanup {
+            deleteDir()
+        }
+        success {
+            script {
+                sh "ls -al"
+                sh "pwd"
+
+                // archive *.deb artifact on custom builds, deploy to repo otherwise
+                if ( isCustomBuild()) {
+                    archiveArtifacts artifacts: '*.deb', fingerprint: true
+                } else {
+                    archiveArtifacts artifacts: '*.deb', fingerprint: true
+                }
+            }
+        }
+    }
+}
