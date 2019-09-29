@@ -180,8 +180,9 @@ pipeline {
                         def driver_filename = driver_url.split('/')[-1]
                         def driver_dir = driver_filename.replace('.tar.gz', '')
                         def driver_version = driver_dir.split('-')[-1]
+                        def driver_version_extra = '0'
 
-                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-1_${DEBIAN_ARCH}"
+                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-${driver_version_extra}_${DEBIAN_ARCH}"
                         def deb_control = "${debian_dir}/DEBIAN/control"
 
                         build[pkg.key] = {
@@ -200,8 +201,8 @@ pipeline {
 
                                 mkdir -p \$(dirname "${deb_control}")
 
-                                echo "Package: intel-${driver_name}" > "${deb_control}"
-                                echo "Version: ${driver_version}" >> "${deb_control}"
+                                echo "Package: vyos-intel-${driver_name}" > "${deb_control}"
+                                echo "Version: ${driver_version}-${driver_version_extra}" >> "${deb_control}"
                                 echo "Section: kernel" >> "${deb_control}"
                                 echo "Priority: extra" >> "${deb_control}"
                                 echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
@@ -209,7 +210,7 @@ pipeline {
                                 echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
 
                                 # delete non required files which are also present in the kernel package
-                                find "${debian_dir}" -name modules.alias | xargs rm -f
+                                find "${debian_dir}" -name "modules.*" | xargs rm -f
 
                                 # generate debian package
                                 dpkg-deb --build "${debian_dir}"
@@ -263,7 +264,7 @@ pipeline {
                                 cpack -G DEB
 
                                 # rename resulting Debian package according git description
-                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')-1_"${DEBIAN_ARCH}".deb
+                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
                             """
                         }
                     }
