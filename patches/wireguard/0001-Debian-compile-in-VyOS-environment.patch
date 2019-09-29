@@ -3,37 +3,46 @@ From: Christian Poessinger <christian@poessinger.com>
 Date: Wed Sep 25 07:50:39 2019 +0200
 Subject: [PATCH] Debian: compile in VyOS environment
 
----
- debian/control | 1 -
- debian/rules   | 4 +++-
- 2 files changed, 3 insertions(+), 2 deletions(-)
+----
 
-diff --git a/debian/control b/debian/control
-index dc1fd11..c72dbf3 100644
---- a/debian/control
-+++ b/debian/control
-@@ -17,7 +17,6 @@ Rules-Requires-Root: no
+diff --git i/debian/control w/debian/control
+index dc1fd11..b7e5b51 100644
+--- i/debian/control
++++ w/debian/control
+@@ -17,7 +17,7 @@ Rules-Requires-Root: no
  Package: wireguard
  Architecture: all
  Depends:
 - wireguard-dkms (= ${source:Version}) | wireguard-modules (= ${source:Upstream-Version}),
++ wireguard-modules (= ${source:Version}),
   wireguard-tools (>= ${source:Version}),
   ${misc:Depends},
  Description: fast, modern, secure kernel VPN tunnel (metapackage)
-diff --git a/debian/rules b/debian/rules
-index af06b98..3bdfb6c 100755
---- a/debian/rules
-+++ b/debian/rules
-@@ -6,6 +6,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+@@ -33,7 +33,7 @@ Description: fast, modern, secure kernel VPN tunnel (metapackage)
+  userspace tooling, and tries to load the new kernel module upon
+  installation, if wireguard is already in use on the system.
+ 
+-Package: wireguard-dkms
++Package: wireguard-modules
+ Architecture: all
+ Section: kernel
+ Depends:
+diff --git i/debian/rules w/debian/rules
+index af06b98..97df06a 100755
+--- i/debian/rules
++++ w/debian/rules
+@@ -6,21 +6,17 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
  export DEB_VERSION_UPSTREAM
  
  WIREGUARD_ARGS = WITH_BASHCOMPLETION=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=yes V=1
 +KERNEL_VERSION := $(shell cat "${KERNELDIR}"/include/config/kernel.release)
  
  %:
- 	dh $@ --with dkms
-@@ -14,10 +15,11 @@ override_dh_auto_install-indep:
- 	$(MAKE) -C src DESTDIR=../debian/wireguard-dkms DKMSDIR=/usr/src/wireguard-$(DEB_VERSION_UPSTREAM) dkms-install
+-	dh $@ --with dkms
+-
+-override_dh_auto_install-indep:
+-	$(MAKE) -C src DESTDIR=../debian/wireguard-dkms DKMSDIR=/usr/src/wireguard-$(DEB_VERSION_UPSTREAM) dkms-install
++	dh $@
  
  override_dh_auto_build-arch:
 -	dh_auto_build --sourcedirectory=src/tools -- $(WIREGUARD_ARGS)
@@ -41,10 +50,10 @@ index af06b98..3bdfb6c 100755
  
  override_dh_auto_install-arch:
  	$(MAKE) -C src/tools DESTDIR=../../debian/wireguard-tools $(WIREGUARD_ARGS) install
-+	dh_install src/wireguard.ko /lib/modules/$(KERNEL_VERSION)/extra
+-
+-override_dh_dkms:
+-	dh_dkms -p wireguard-dkms -- src/dkms.conf
++	echo "src/wireguard.ko /lib/modules/$(KERNEL_VERSION)/extra" > debian/wireguard-modules.install
  
- override_dh_dkms:
- 	dh_dkms -p wireguard-dkms -- src/dkms.conf
--- 
-2.1.4
-
+ override_dh_installchangelogs:
+ 	dh_installchangelogs debian/upstream.changelog
