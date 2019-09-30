@@ -105,7 +105,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'v4.19.70' ]],
+                                branches: [[name: 'v4.19.54' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
@@ -116,8 +116,8 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'debian/0.0.20190913-1' ]],
-                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
+                                branches: [[name: 'crux' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-wireguard.git']]])
                         }
                     }
                 }
@@ -127,8 +127,8 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: '1.12.0' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/xebd/accel-ppp.git']]])
+                                branches: [[name: 'crux' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-accel-ppp.git']]])
                         }
                     }
                 }
@@ -180,8 +180,9 @@ pipeline {
                         def driver_filename = driver_url.split('/')[-1]
                         def driver_dir = driver_filename.replace('.tar.gz', '')
                         def driver_version = driver_dir.split('-')[-1]
+                        def driver_version_extra = '0'
 
-                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-1_${DEBIAN_ARCH}"
+                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-${driver_version_extra}_${DEBIAN_ARCH}"
                         def deb_control = "${debian_dir}/DEBIAN/control"
 
                         build[pkg.key] = {
@@ -200,13 +201,16 @@ pipeline {
 
                                 mkdir -p \$(dirname "${deb_control}")
 
-                                echo "Package: intel-${driver_name}" > "${deb_control}"
-                                echo "Version: ${driver_version}" >> "${deb_control}"
+                                echo "Package: vyos-intel-${driver_name}" > "${deb_control}"
+                                echo "Version: ${driver_version}-${driver_version_extra}" >> "${deb_control}"
                                 echo "Section: kernel" >> "${deb_control}"
                                 echo "Priority: extra" >> "${deb_control}"
                                 echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
                                 echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
                                 echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
+
+                                # delete non required files which are also present in the kernel package
+                                find "${debian_dir}" -name "modules.*" | xargs rm -f
 
                                 # generate debian package
                                 dpkg-deb --build "${debian_dir}"
@@ -223,44 +227,21 @@ pipeline {
                     steps {
                         dir('wireguard') {
                             sh """
-                                # We need some WireGuard patches for building
-                                # It's easier to habe them here and make use of the upstream
-                                # repository instead of maintaining a full Kernel Fork.
-                                # Saving time/resources is essential :-)
-                                PATCH_DIR=${env.WORKSPACE}/patches/wireguard
-                                for patch in \$(ls \${PATCH_DIR})
-                                do
-                                    echo \${PATCH_DIR}/\${patch}
-                                    patch -p1 < \${PATCH_DIR}/\${patch}
-                                done
-
-                                # set debhelper compatibility level
-                                echo "9" > debian/compat
-
                                 # Upstream WireGuard sources depend on debhelper == 12
                                 # we only have 9 so use the '-d' override option which works
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -d
+                                echo "src/wireguard.ko /lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/extra" > debian/wireguard-modules.install
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
                             """
                         }
                     }
                 }
                 stage('Accel-PPP') {
                     steps {
-                        dir('accel-ppp/build') {
+                        dir('accel-ppp') {
                             sh """
-                                cmake -DBUILD_IPOE_DRIVER=TRUE \
-                                    -DBUILD_VLAN_MON_DRIVER=TRUE \
-                                    -DCMAKE_INSTALL_PREFIX=/usr \
-                                    -DKDIR="${env.WORKSPACE}/linux-kernel" \
-                                    -DLUA=TRUE \
-                                    -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
-                                    -DCPACK_TYPE=Debian8 \
-                                    ..
-                                make
-                                cpack -G DEB
-
-                                # rename resulting Debian package according git description
-                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')-1_"${DEBIAN_ARCH}".deb
+                                echo "lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/extra/*.ko" > debian/vyos-accel-ppp-ipoe-kmod.install
+                                sed -i "s#[0-9].[0-9][0-9].[0-9]*${KERNEL_SUFFIX}#"${KERNEL_VERSION}${KERNEL_SUFFIX}"#g" debian/rules
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
                             """
                         }
                     }
@@ -274,15 +255,7 @@ pipeline {
         }
         success {
             script {
-                sh "ls -al"
-                sh "pwd"
-
-                // archive *.deb artifact on custom builds, deploy to repo otherwise
-                if ( isCustomBuild()) {
-                    archiveArtifacts artifacts: '*.deb', fingerprint: true
-                } else {
-                    archiveArtifacts artifacts: '*.deb', fingerprint: true
-                }
+                archiveArtifacts artifacts: '*.deb', fingerprint: true
             }
         }
     }
