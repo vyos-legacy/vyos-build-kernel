@@ -68,7 +68,6 @@ def setDescription() {
 def IntelMap = [:]
 IntelMap['ixgbe']   = 'https://sourceforge.net/projects/e1000/files/ixgbe%20stable/5.5.5/ixgbe-5.5.5.tar.gz/download'
 IntelMap['igb']     = 'https://sourceforge.net/projects/e1000/files/igb%20stable/5.3.5.22s/igb-5.3.5.22s.tar.gz/download'
-IntelMap['e1000e']  = 'https://sourceforge.net/projects/e1000/files/e1000e%20stable/3.5.1/e1000e-3.5.1.tar.gz/download'
 IntelMap['i40e']    = 'https://sourceforge.net/projects/e1000/files/i40e%20stable/2.9.21/i40e-2.9.21.tar.gz/download'
 IntelMap['ixgbevf'] = 'https://sourceforge.net/projects/e1000/files/ixgbevf%20stable/4.5.3/ixgbevf-4.5.3.tar.gz/download'
 IntelMap['i40evf']  = 'https://sourceforge.net/projects/e1000/files/i40evf%20stable/3.6.15/i40evf-3.6.15.tar.gz/download'
