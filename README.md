@@ -1,20 +1,26 @@
-# vyos-ci
+# About
 
-This repository should serve as a Demo on how to build the VyOS Linux Kernel
-with out-of-tree modules as a Jenkins Pipeline job. The build is performed
-utilizing a Docker conainer which is automatically retrieved from Dockerhub.
+VyOS runs on a custom Linux Kernel (which is 4.19) at the time of this writing.
+This repository holds a Jenkins Pipeline which is used to build the Custom
+Kernel (x86_64/amd64 at the moment) and all required out-of tree modules.
+
+VyOS does not utilize the build in Intel Kernel drivers for its NICs as those
+Kernels sometimes lack features e.g. configurable receive-side-scaling queues.
+On the other hand we ship additional not mainlined features as WireGuard VPN.
 
 ## Kernel
 
-Kernel is build from the Vanilla Kernel source (git.kernel.org) with some patches
-included (see patches folder). Those patched unfortunately did not make it into
-mainline but are required for VyOS.
+The Kernel is build from the vanilla repositories hosted at https://git.kernel.org.
+VyOS requires two additional patches to work which are stored in the patches/kernel
+folder.
 
 ### Config
 
-VyOS Kernel configuration ([x86_64_vyos_defconfig](x86_64_vyos_defconfig)) will
-be copied on demand to the Kernel source tree during build time and will generate
-the appropriate packages.
+The Kernel configuration used is [x86_64_vyos_defconfig](x86_64_vyos_defconfig)
+which will be copied on demand during the Pipeline run into the `arch/x86/configs`i
+direcotry of the Kernel source tree.
+
+Other configurations can be added in the future easily.
 
 ### Modules
 
@@ -28,4 +34,3 @@ Accel-PPP. This is fine but increases maintenance effort. By utilizing vanilla
 repositories upgrading to new versions is very easy - only the branch/commit/tag
 used when cloning the repository via [Jenkinsfile](Jenkinsfile) needs to be
 adjusted.
-

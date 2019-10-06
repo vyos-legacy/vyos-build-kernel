@@ -105,7 +105,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'v4.19.54' ]],
+                                branches: [[name: 'v4.19.76' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
@@ -116,8 +116,8 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'crux' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-wireguard.git']]])
+                                branches: [[name: 'debian/0.0.20190913-1' ]],
+                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
                         }
                     }
                 }
@@ -127,8 +127,8 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'crux' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-accel-ppp.git']]])
+                                branches: [[name: '1.12.0' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/xebd/accel-ppp.git']]])
                         }
                     }
                 }
@@ -227,21 +227,45 @@ pipeline {
                     steps {
                         dir('wireguard') {
                             sh """
+                                # We need some WireGuard patches for building
+                                # It's easier to habe them here and make use of the upstream
+                                # repository instead of maintaining a full Kernel Fork.
+                                # Saving time/resources is essential :-)
+                                PATCH_DIR=${env.WORKSPACE}/patches/wireguard
+                                for patch in \$(ls \${PATCH_DIR})
+                                do
+                                    echo \${PATCH_DIR}/\${patch}
+                                    patch -p1 < \${PATCH_DIR}/\${patch}
+                                done
+
+                                # set debhelper compatibility level
+                                echo "9" > debian/compat
+
                                 # Upstream WireGuard sources depend on debhelper == 12
                                 # we only have 9 so use the '-d' override option which works
-                                echo "src/wireguard.ko /lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/extra" > debian/wireguard-modules.install
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -d
                             """
                         }
                     }
                 }
                 stage('Accel-PPP') {
                     steps {
-                        dir('accel-ppp') {
+                        dir('accel-ppp/build') {
                             sh """
-                                echo "lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/extra/*.ko" > debian/vyos-accel-ppp-ipoe-kmod.install
-                                sed -i "s#[0-9].[0-9][0-9].[0-9]*${KERNEL_SUFFIX}#"${KERNEL_VERSION}${KERNEL_SUFFIX}"#g" debian/rules
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
+                                cmake -DBUILD_IPOE_DRIVER=TRUE \
+                                    -DBUILD_VLAN_MON_DRIVER=TRUE \
+                                    -DCMAKE_INSTALL_PREFIX=/usr \
+                                    -DKDIR="${env.WORKSPACE}/linux-kernel" \
+                                    -DLUA=TRUE \
+                                    -DLUA=5.2 \
+                                    -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
+                                    -DCPACK_TYPE=Debian8 \
+                                    ..
+                                make
+                                cpack -G DEB
+
+                                # rename resulting Debian package according git description
+                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
                             """
                         }
                     }
