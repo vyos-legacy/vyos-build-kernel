@@ -1,3 +1,5 @@
 /linux-kernel
 /wireguard
 /accel-ppp
+*.deb
+*.changes
