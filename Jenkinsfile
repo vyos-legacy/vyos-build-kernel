@@ -175,7 +175,7 @@ pipeline {
 
                         sh """
                             # Compile Kernel :-)
-                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${env.KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
+                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
                         """
                     }
                 }
@@ -219,6 +219,7 @@ pipeline {
                                 echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
                                 echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
                                 echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
+                                echo "Depends: linux-image-${KERNEL_VERSION}${KERNEL_SUFFIX}" >> "${deb_control}"
 
                                 # delete non required files which are also present in the kernel package
                                 find "${debian_dir}" -name "modules.*" | xargs rm -f
