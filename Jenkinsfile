@@ -107,7 +107,6 @@ pipeline {
                                 extensions: [[$class: 'CleanCheckout']],
                                 branches: [[name: 'v4.19.79' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
-
                         }
                     }
                 }
