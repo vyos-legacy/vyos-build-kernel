@@ -85,6 +85,7 @@ pipeline {
         docker {
             args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
             image 'vyos/vyos-build:current'
+            alwaysPull true
         }
     }
     options {
@@ -106,6 +107,7 @@ pipeline {
                                 extensions: [[$class: 'CleanCheckout']],
                                 branches: [[name: 'v4.19.79' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
+
                         }
                     }
                 }
@@ -128,6 +130,17 @@ pipeline {
                                 extensions: [[$class: 'CleanCheckout']],
                                 branches: [[name: '1.12.0' ]],
                                 userRemoteConfigs: [[url: 'https://github.com/xebd/accel-ppp.git']]])
+                        }
+                    }
+                }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'master' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat']]])
                         }
                     }
                 }
@@ -265,6 +278,15 @@ pipeline {
 
                                 # rename resulting Debian package according git description
                                 mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
+                            """
+                        }
+                    }
+                }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            sh """
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -jauto
                             """
                         }
                     }
