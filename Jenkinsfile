@@ -132,6 +132,18 @@ pipeline {
                         }
                     }
                 }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'master' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat']]])
+                        }
+                    }
+                }
+
             }
         }
         stage('Compile Kernel') {
@@ -267,6 +279,15 @@ pipeline {
 
                                 # rename resulting Debian package according git description
                                 mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
+                            """
+                        }
+                    }
+                }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            sh """
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -jauto
                             """
                         }
                     }
