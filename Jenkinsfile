@@ -85,6 +85,7 @@ pipeline {
         docker {
             args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
             image 'vyos/vyos-build:crux'
+            alwaysPull true
         }
     }
     options {
@@ -104,7 +105,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'v4.19.79' ]],
+                                branches: [[name: 'v4.19.84' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
@@ -115,7 +116,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'debian/0.0.20190913-1' ]],
+                                branches: [[name: 'debian/0.0.20191012-1' ]],
                                 userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
                         }
                     }
@@ -131,6 +132,18 @@ pipeline {
                         }
                     }
                 }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'master' ]],
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat']]])
+                        }
+                    }
+                }
+
             }
         }
         stage('Compile Kernel') {
@@ -163,7 +176,7 @@ pipeline {
 
                         sh """
                             # Compile Kernel :-)
-                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${env.KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
+                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
                         """
                     }
                 }
@@ -207,6 +220,7 @@ pipeline {
                                 echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
                                 echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
                                 echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
+                                echo "Depends: linux-image-${KERNEL_VERSION}${KERNEL_SUFFIX}" >> "${deb_control}"
 
                                 # delete non required files which are also present in the kernel package
                                 find "${debian_dir}" -name "modules.*" | xargs rm -f
@@ -265,6 +279,15 @@ pipeline {
 
                                 # rename resulting Debian package according git description
                                 mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
+                            """
+                        }
+                    }
+                }
+                stage('Intel-QAT') {
+                    steps {
+                        dir('intel-qat') {
+                            sh """
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -jauto
                             """
                         }
                     }
