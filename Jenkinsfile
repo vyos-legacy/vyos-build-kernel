@@ -116,7 +116,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'debian/0.0.20191127-2' ]],
+                                branches: [[name: 'debian/0.0.20191212-1' ]],
                                 userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
                         }
                     }
