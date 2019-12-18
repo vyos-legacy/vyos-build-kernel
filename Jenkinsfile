@@ -251,12 +251,7 @@ pipeline {
                                     patch -p1 < \${PATCH_DIR}/\${patch}
                                 done
 
-                                # set debhelper compatibility level
-                                echo "9" > debian/compat
-
-                                # Upstream WireGuard sources depend on debhelper == 12
-                                # we only have 9 so use the '-d' override option which works
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -d
+                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
                             """
                         }
                     }
