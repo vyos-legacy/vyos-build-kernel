@@ -309,11 +309,7 @@ pipeline {
                     sshagent(['SSH-dev.packages.vyos.net']) {
                         // build up some fancy groovy variables so we do not need to write/copy
                         // every option over and over again!
-
                         def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + getGitBranchName() + '/'
-                        if (getGitBranchName() != "equuleus")
-                            VYOS_REPO_PATH += 'vyos/'
-
                         def SSH_OPTS = '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
                         def SSH_REMOTE = 'khagen@10.217.48.113'
 
