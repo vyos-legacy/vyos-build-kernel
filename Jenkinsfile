@@ -267,7 +267,7 @@ pipeline {
                                     -DLUA=TRUE \
                                     -DLUA=5.2 \
                                     -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
-                                    -DCPACK_TYPE=Debian8 \
+                                    -DCPACK_TYPE=Debian10 \
                                     ..
                                 make
                                 cpack -G DEB
