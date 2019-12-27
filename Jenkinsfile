@@ -265,7 +265,7 @@ pipeline {
                                     -DCMAKE_INSTALL_PREFIX=/usr \
                                     -DKDIR="${env.WORKSPACE}/linux-kernel" \
                                     -DLUA=TRUE \
-                                    -DLUA=5.2 \
+                                    -DLUA=5.3 \
                                     -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
                                     -DCPACK_TYPE=Debian10 \
                                     ..
