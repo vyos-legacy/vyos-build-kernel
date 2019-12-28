@@ -118,7 +118,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'v4.19.89' ]],
+                                branches: [[name: 'v4.19.91' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
