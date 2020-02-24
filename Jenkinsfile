@@ -223,10 +223,7 @@ pipeline {
 
                                 # compile module
                                 cd "${env.WORKSPACE}/${driver_dir}/src"
-                                KSRC="${env.WORKSPACE}/linux-kernel" \
-                                    INSTALL_MOD_PATH="${debian_dir}" \
-                                    INSTALL_MOD_DIR="kernel/drivers/net/ethernet/intel/${driver_name}" \
-                                    make -j \$(getconf _NPROCESSORS_ONLN) install
+                                KSRC="${env.WORKSPACE}/linux-kernel" INSTALL_MOD_PATH="${debian_dir}" make -j \$(getconf _NPROCESSORS_ONLN) install
 
                                 mkdir -p \$(dirname "${deb_control}")
 
