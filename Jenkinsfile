@@ -118,7 +118,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'v4.19.84' ]],
+                                branches: [[name: 'v4.19.106' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
@@ -129,7 +129,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'debian/0.0.20191012-1' ]],
+                                branches: [[name: 'debian/0.0.20191219-1' ]],
                                 userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
                         }
                     }
@@ -267,11 +267,9 @@ pipeline {
                                     patch -p1 < \${PATCH_DIR}/\${patch}
                                 done
 
-                                # set debhelper compatibility level
-                                echo "9" > debian/compat
+                                # set compatibility level to 9
+                                echo 9 > debian/compat
 
-                                # Upstream WireGuard sources depend on debhelper == 12
-                                # we only have 9 so use the '-d' override option which works
                                 KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -d
                             """
                         }
