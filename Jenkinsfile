@@ -194,24 +194,7 @@ pipeline {
                 }
                 stage('Accel-PPP') {
                     steps {
-                        dir('accel-ppp/build') {
-                            sh """
-                                cmake -DBUILD_IPOE_DRIVER=TRUE \
-                                    -DBUILD_VLAN_MON_DRIVER=TRUE \
-                                    -DCMAKE_INSTALL_PREFIX=/usr \
-                                    -DKDIR="${env.WORKSPACE}/linux-kernel" \
-                                    -DLUA=TRUE \
-                                    -DLUA=5.3 \
-                                    -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
-                                    -DCPACK_TYPE=Debian10 \
-                                    ..
-                                make
-                                cpack -G DEB
-
-                                # rename resulting Debian package according git description
-                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
-                            """
-                        }
+                       sh "./build-accel-ppp.sh"
                     }
                 }
                 stage('Intel-QAT') {
