@@ -130,7 +130,7 @@ pipeline {
             parallel {
                 stage('Kernel') {
                     steps {
-                        dir('linux-kernel') {
+                        dir('linux') {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
@@ -177,38 +177,7 @@ pipeline {
         }
         stage('Compile Kernel') {
             steps {
-                script {
-                    // Copy __versioned__ Kernel config to Kernel config directory
-                    sh "cp x86_64_vyos_defconfig linux-kernel/arch/x86/configs/"
-
-                    dir('linux-kernel') {
-                        // provide Kernel version as environement variable
-                        env.KERNEL_VERSION = sh(returnStdout: true, script: 'echo $(make kernelversion)').trim()
-                        // provide Kernel version suffix as environment variable
-                        env.KERNEL_SUFFIX = "-${DEBIAN_ARCH}-vyos"
-
-                        sh """
-                            # VyOS requires some small Kernel Patches - apply them here
-                            # It's easier to habe them here and make use of the upstream
-                            # repository instead of maintaining a full Kernel Fork.
-                            # Saving time/resources is essential :-)
-                            PATCH_DIR=${env.WORKSPACE}/patches/kernel
-                            for patch in \$(ls \${PATCH_DIR})
-                            do
-                                echo \${PATCH_DIR}/\${patch}
-                                patch -p1 < \${PATCH_DIR}/\${patch}
-                            done
-
-                            # Select Kernel configuration - currently there is only one
-                            make x86_64_vyos_defconfig
-                        """
-
-                        sh """
-                            # Compile Kernel :-)
-                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
-                        """
-                    }
-                }
+                sh "./build-kernel.sh"
             }
         }
         stage('Intel Driver(s)') {

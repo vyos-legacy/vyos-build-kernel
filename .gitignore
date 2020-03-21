@@ -1,5 +1,9 @@
-/linux-kernel
-/wireguard
-/accel-ppp
+linux
+wireguard
+accel-ppp
+vyos-qat
 *.deb
 *.changes
+*.buildinfo
+
+kernel-vars
