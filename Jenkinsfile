@@ -189,22 +189,7 @@ pipeline {
             parallel {
                 stage('WireGuard') {
                     steps {
-                        dir('wireguard') {
-                            sh """
-                                # We need some WireGuard patches for building
-                                # It's easier to habe them here and make use of the upstream
-                                # repository instead of maintaining a full Kernel Fork.
-                                # Saving time/resources is essential :-)
-                                PATCH_DIR=${env.WORKSPACE}/patches/wireguard
-                                for patch in \$(ls \${PATCH_DIR})
-                                do
-                                    echo \${PATCH_DIR}/\${patch}
-                                    patch -p1 < \${PATCH_DIR}/\${patch}
-                                done
-
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
-                            """
-                        }
+                        sh "./build-wireguard.sh"
                     }
                 }
                 stage('Accel-PPP') {
