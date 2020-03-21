@@ -36,7 +36,7 @@ def isCustomBuild() {
     def gitURI = 'git@github.com:vyos/' + getGitRepoName()
     def httpURI = 'https://github.com/vyos/' + getGitRepoName()
 
-    return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
+    return !((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI)) || env.CHANGE_ID
 }
 
 def setDescription() {
@@ -86,7 +86,13 @@ node('Docker') {
         script {
             // create container name on demand
             def branchName = getGitBranchName()
-            if (branchName == "master") {
+            // Adjust PR target branch name so we can re-map it to the proper
+            // Docker image. CHANGE_ID is set only for pull requests, so it is
+            // safe to access the pullRequest global variable
+            if (env.CHANGE_ID) {
+                branchName = "${env.CHANGE_TARGET}".toLowerCase()
+            }
+            if (branchName.equals("master")) {
                 branchName = "current"
             }
             env.DOCKER_IMAGE = "vyos/vyos-build:" + branchName
@@ -111,11 +117,20 @@ pipeline {
         DEBIAN_ARCH = sh(returnStdout: true, script: 'dpkg --print-architecture').trim()
     }
     stages {
-        stage('Git Clone') {
+        stage('Fetch') {
+            steps {
+                script {
+                    dir('build') {
+                        checkout scm
+                    }
+                }
+            }
+        }
+        stage('Git Clone - Components') {
             parallel {
                 stage('Kernel') {
                     steps {
-                        dir('linux-kernel') {
+                        dir('linux') {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
@@ -162,143 +177,29 @@ pipeline {
         }
         stage('Compile Kernel') {
             steps {
-                script {
-                    // Copy __versioned__ Kernel config to Kernel config directory
-                    sh "cp x86_64_vyos_defconfig linux-kernel/arch/x86/configs/"
-
-                    dir('linux-kernel') {
-                        // provide Kernel version as environement variable
-                        env.KERNEL_VERSION = sh(returnStdout: true, script: 'echo $(make kernelversion)').trim()
-                        // provide Kernel version suffix as environment variable
-                        env.KERNEL_SUFFIX = "-${DEBIAN_ARCH}-vyos"
-
-                        sh """
-                            # VyOS requires some small Kernel Patches - apply them here
-                            # It's easier to habe them here and make use of the upstream
-                            # repository instead of maintaining a full Kernel Fork.
-                            # Saving time/resources is essential :-)
-                            PATCH_DIR=${env.WORKSPACE}/patches/kernel
-                            for patch in \$(ls \${PATCH_DIR})
-                            do
-                                echo \${PATCH_DIR}/\${patch}
-                                patch -p1 < \${PATCH_DIR}/\${patch}
-                            done
-
-                            # Select Kernel configuration - currently there is only one
-                            make x86_64_vyos_defconfig
-                        """
-
-                        sh """
-                            # Compile Kernel :-)
-                            make bindeb-pkg LOCALVERSION=${KERNEL_SUFFIX} KDEB_PKGVERSION=${KERNEL_VERSION}-1 -j \$(getconf _NPROCESSORS_ONLN)
-                        """
-                    }
-                }
+                sh "./build-kernel.sh"
             }
         }
         stage('Intel Driver(s)') {
             steps {
-                script {
-                    def build = [:]
-                    IntelMap.each { pkg ->
-                        def driver_name = pkg.key
-                        def driver_url = pkg.value.replace('/download', '')
-                        def driver_filename = driver_url.split('/')[-1]
-                        def driver_dir = driver_filename.replace('.tar.gz', '')
-                        def driver_version = driver_dir.split('-')[-1]
-                        def driver_version_extra = '0'
-
-                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-${driver_version_extra}_${DEBIAN_ARCH}"
-                        def deb_control = "${debian_dir}/DEBIAN/control"
-
-                        build[pkg.key] = {
-                            sh """
-                                curl -L -o "${driver_filename}" "${driver_url}"
-                                if [ "\$?" != "0" ]; then
-                                    exit 1
-                                fi
-
-                                # unpack archive
-                                tar xf "${driver_filename}"
-
-                                # compile module
-                                cd "${env.WORKSPACE}/${driver_dir}/src"
-                                KSRC="${env.WORKSPACE}/linux-kernel" INSTALL_MOD_PATH="${debian_dir}" make -j \$(getconf _NPROCESSORS_ONLN) install
-
-                                mkdir -p \$(dirname "${deb_control}")
-
-                                echo "Package: vyos-intel-${driver_name}" > "${deb_control}"
-                                echo "Version: ${driver_version}-${driver_version_extra}" >> "${deb_control}"
-                                echo "Section: kernel" >> "${deb_control}"
-                                echo "Priority: extra" >> "${deb_control}"
-                                echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
-                                echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
-                                echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
-                                echo "Depends: linux-image-${KERNEL_VERSION}${KERNEL_SUFFIX}" >> "${deb_control}"
-
-                                # delete non required files which are also present in the kernel package
-                                find "${debian_dir}" -name "modules.*" | xargs rm -f
-
-                                # generate debian package
-                                dpkg-deb --build "${debian_dir}"
-                            """
-                        }
-                    }
-                    parallel build
-                }
+                sh "./build-intel-drivers.sh"
             }
         }
         stage('Kernel Module(s)') {
             parallel {
                 stage('WireGuard') {
                     steps {
-                        dir('wireguard') {
-                            sh """
-                                # We need some WireGuard patches for building
-                                # It's easier to habe them here and make use of the upstream
-                                # repository instead of maintaining a full Kernel Fork.
-                                # Saving time/resources is essential :-)
-                                PATCH_DIR=${env.WORKSPACE}/patches/wireguard
-                                for patch in \$(ls \${PATCH_DIR})
-                                do
-                                    echo \${PATCH_DIR}/\${patch}
-                                    patch -p1 < \${PATCH_DIR}/\${patch}
-                                done
-
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc
-                            """
-                        }
+                        sh "./build-wireguard.sh"
                     }
                 }
                 stage('Accel-PPP') {
                     steps {
-                        dir('accel-ppp/build') {
-                            sh """
-                                cmake -DBUILD_IPOE_DRIVER=TRUE \
-                                    -DBUILD_VLAN_MON_DRIVER=TRUE \
-                                    -DCMAKE_INSTALL_PREFIX=/usr \
-                                    -DKDIR="${env.WORKSPACE}/linux-kernel" \
-                                    -DLUA=TRUE \
-                                    -DLUA=5.3 \
-                                    -DMODULES_KDIR=\${KERNEL_VERSION}\${KERNEL_SUFFIX} \
-                                    -DCPACK_TYPE=Debian10 \
-                                    ..
-                                make
-                                cpack -G DEB
-
-                                # rename resulting Debian package according git description
-                                mv accel-ppp*.deb ${env.WORKSPACE}/accel-ppp_\$(git describe --all | awk -F/ '{print \$2}')_"${DEBIAN_ARCH}".deb
-                            """
-                        }
+                       sh "./build-accel-ppp.sh"
                     }
                 }
                 stage('Intel-QAT') {
                     steps {
-                        dir('intel-qat') {
-                            sh """
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -jauto
-                            """
-                        }
+                        sh "./build-intel-qat.sh"
                     }
                 }
             }
