@@ -182,54 +182,7 @@ pipeline {
         }
         stage('Intel Driver(s)') {
             steps {
-                script {
-                    def build = [:]
-                    IntelMap.each { pkg ->
-                        def driver_name = pkg.key
-                        def driver_url = pkg.value.replace('/download', '')
-                        def driver_filename = driver_url.split('/')[-1]
-                        def driver_dir = driver_filename.replace('.tar.gz', '')
-                        def driver_version = driver_dir.split('-')[-1]
-                        def driver_version_extra = '0'
-
-                        def debian_dir = "${env.WORKSPACE}/vyos-intel-${driver_name}_${driver_version}-${driver_version_extra}_${DEBIAN_ARCH}"
-                        def deb_control = "${debian_dir}/DEBIAN/control"
-
-                        build[pkg.key] = {
-                            sh """
-                                curl -L -o "${driver_filename}" "${driver_url}"
-                                if [ "\$?" != "0" ]; then
-                                    exit 1
-                                fi
-
-                                # unpack archive
-                                tar xf "${driver_filename}"
-
-                                # compile module
-                                cd "${env.WORKSPACE}/${driver_dir}/src"
-                                KSRC="${env.WORKSPACE}/linux-kernel" INSTALL_MOD_PATH="${debian_dir}" make -j \$(getconf _NPROCESSORS_ONLN) install
-
-                                mkdir -p \$(dirname "${deb_control}")
-
-                                echo "Package: vyos-intel-${driver_name}" > "${deb_control}"
-                                echo "Version: ${driver_version}-${driver_version_extra}" >> "${deb_control}"
-                                echo "Section: kernel" >> "${deb_control}"
-                                echo "Priority: extra" >> "${deb_control}"
-                                echo "Architecture: ${DEBIAN_ARCH}" >> "${deb_control}"
-                                echo "Maintainer: VyOS Package Maintainers <maintainers@vyos.net>" >> "${deb_control}"
-                                echo "Description: Intel Vendor driver for ${driver_name}" >> "${deb_control}"
-                                echo "Depends: linux-image-${KERNEL_VERSION}${KERNEL_SUFFIX}" >> "${deb_control}"
-
-                                # delete non required files which are also present in the kernel package
-                                find "${debian_dir}" -name "modules.*" | xargs rm -f
-
-                                # generate debian package
-                                dpkg-deb --build "${debian_dir}"
-                            """
-                        }
-                    }
-                    parallel build
-                }
+                sh "./build-intel-drivers.sh"
             }
         }
         stage('Kernel Module(s)') {
