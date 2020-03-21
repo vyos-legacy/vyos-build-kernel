@@ -199,11 +199,7 @@ pipeline {
                 }
                 stage('Intel-QAT') {
                     steps {
-                        dir('intel-qat') {
-                            sh """
-                                KERNELDIR="${env.WORKSPACE}/linux-kernel" dpkg-buildpackage -b -us -uc -tc -jauto
-                            """
-                        }
+                        sh "./build-intel-qat.sh"
                     }
                 }
             }

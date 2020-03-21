@@ -1,7 +1,7 @@
 linux
 wireguard
 accel-ppp
-vyos-qat
+intel-qat
 *.deb
 *.changes
 *.buildinfo
