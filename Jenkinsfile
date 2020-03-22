@@ -157,7 +157,7 @@ pipeline {
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
                                 branches: [[name: '1.12.0' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/xebd/accel-ppp.git']]])
+                                userRemoteConfigs: [[url: 'https://github.com/accel-ppp/accel-ppp.git']]])
                         }
                     }
                 }
