@@ -156,7 +156,7 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: '1.12.0' ]],
+                                branches: [[name: 'c983d6f0763c572' ]],
                                 userRemoteConfigs: [[url: 'https://github.com/accel-ppp/accel-ppp.git']]])
                         }
                     }
