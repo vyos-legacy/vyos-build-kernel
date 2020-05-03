@@ -146,8 +146,15 @@ pipeline {
                             checkout([$class: 'GitSCM',
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'debian/0.0.20191219-1' ]],
-                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard']]])
+                                branches: [[name: 'debian/1.0.20200319-1_bpo10+1' ]],
+                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard.git']]])
+                        }
+                        dir('wireguard-linux-compat') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout']],
+                                branches: [[name: 'debian/1.0.20200429-2_bpo10+1' ]],
+                                userRemoteConfigs: [[url: 'https://salsa.debian.org/debian/wireguard-linux-compat.git']]])
                         }
                     }
                 }
@@ -190,7 +197,12 @@ pipeline {
             parallel {
                 stage('WireGuard') {
                     steps {
-                        sh "./build-wireguard.sh"
+                        // In Debian wireguard repo commit edb7124c866ea0e506278c311fc82dfde1f957be
+                        // they decided to split source code of the kernel part and tools
+                        dir('wireguard') {
+                            sh "dpkg-buildpackage -b -us -uc -tc"
+                        }
+                        sh "./build-wireguard-modules.sh"
                     }
                 }
                 stage('Accel-PPP') {
