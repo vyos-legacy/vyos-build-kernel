@@ -1,7 +1,8 @@
-linux
-wireguard
-accel-ppp
-intel-qat
+/linux
+/wireguard
+/wireguard-linux-compat
+/accel-ppp
+/intel-qat
 *.deb
 *.changes
 *.buildinfo

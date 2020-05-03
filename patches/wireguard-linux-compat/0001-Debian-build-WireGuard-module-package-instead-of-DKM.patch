@@ -1,0 +1,61 @@
+From 6dd6477c7f8ece767b0bbdfc5a29c1fc2adf4023 Mon Sep 17 00:00:00 2001
+From: Christian Poessinger <christian@poessinger.com>
+Date: Sun, 3 May 2020 10:07:20 +0000
+Subject: [PATCH] Debian: build WireGuard module package instead of DKMS
+
+VyOS requires a pre build binary of the WireGuard package over a DKMS
+build. Change the build rules to produce the binary over the source
+package for DKMS.
+---
+ debian/control | 7 ++-----
+ debian/rules   | 9 ++++-----
+ 2 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/debian/control b/debian/control
+index 7b2af41..3045b28 100644
+--- a/debian/control
++++ b/debian/control
+@@ -13,7 +13,7 @@ Vcs-Git: https://salsa.debian.org/debian/wireguard-linux-compat.git -b debian/bu
+ Vcs-Browser: https://salsa.debian.org/debian/wireguard-linux-compat
+ Rules-Requires-Root: no
+ 
+-Package: wireguard-dkms
++Package: wireguard-modules
+ Architecture: all
+ Section: kernel
+ Depends:
+@@ -30,7 +30,4 @@ Description: fast, modern, secure kernel VPN tunnel (DKMS version)
+  the massive headache. It intends to be considerably more performant
+  than OpenVPN. WireGuard is designed as a general purpose VPN for
+  running on embedded interfaces and super computers alike, fit for
+- many different circumstances. It runs over UDP.
+- .
+- This package uses DKMS to automatically build the wireguard kernel
+- module.
++ many different circumstances. It runs over UDP.
+\ No newline at end of file
+diff --git a/debian/rules b/debian/rules
+index 4fbedc6..15ede39 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -6,12 +6,11 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+ export DEB_VERSION_UPSTREAM
+ 
+ WIREGUARD_ARGS = V=1
++KERNEL_VERSION := $(shell cat "${KERNELDIR}"/include/config/kernel.release)
+ 
+ %:
+-	dh $@ --with dkms
++	dh $@
+ 
+ override_dh_auto_install-indep:
+-	$(MAKE) -C src DESTDIR=../debian/wireguard-dkms DKMSDIR=/usr/src/wireguard-$(DEB_VERSION_UPSTREAM) dkms-install
+-
+-override_dh_dkms:
+-	dh_dkms -p wireguard-dkms -- src/dkms.conf
++	$(MAKE) -C src module
++	echo "src/wireguard.ko /lib/modules/$(KERNEL_VERSION)/extra" > debian/wireguard-modules.install
+\ No newline at end of file
+-- 
+2.20.1
+
