@@ -61,18 +61,6 @@ def setDescription() {
     item.save()
 }
 
-//
-// VyOS builds some Intel Out-of-Tree drivers
-// which are defined here
-//
-def IntelMap = [:]
-IntelMap['ixgbe']   = 'https://sourceforge.net/projects/e1000/files/ixgbe%20stable/5.6.5/ixgbe-5.6.5.tar.gz/download'
-IntelMap['igb']     = 'https://sourceforge.net/projects/e1000/files/igb%20stable/5.3.5.42/igb-5.3.5.42.tar.gz/download'
-IntelMap['i40e']    = 'https://sourceforge.net/projects/e1000/files/i40e%20stable/2.11.21/i40e-2.11.21.tar.gz/download'
-IntelMap['ixgbevf'] = 'https://sourceforge.net/projects/e1000/files/ixgbevf%20stable/4.6.3/ixgbevf-4.6.3.tar.gz/download'
-IntelMap['i40evf']  = 'https://sourceforge.net/projects/e1000/files/i40evf%20stable/3.6.15/i40evf-3.6.15.tar.gz/download'
-IntelMap['iavf']    = 'https://sourceforge.net/projects/e1000/files/iavf%20stable/3.9.3/iavf-3.9.3.tar.gz/download'
-
 /* Only keep the most recent builds. */
 def projectProperties = [
     [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '1']],
