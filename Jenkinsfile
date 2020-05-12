@@ -1,4 +1,4 @@
-// Copyright (C) 2019 VyOS maintainers and contributors
+// Copyright (C) 2019-2020 VyOS maintainers and contributors
 //
 // This program is free software; you can redistribute it and/or modify
 // in order to easy exprort images built to "external" world
@@ -123,7 +123,7 @@ pipeline {
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout'],
                                              [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]],
-                                branches: [[name: 'v4.19.120' ]],
+                                branches: [[name: 'v4.19.122' ]],
                                 userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git']]])
                         }
                     }
@@ -164,7 +164,7 @@ pipeline {
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[$class: 'CleanCheckout']],
                                 branches: [[name: 'master' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat']]])
+                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat.git']]])
                         }
                     }
                 }
