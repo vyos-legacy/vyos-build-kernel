@@ -53,17 +53,19 @@ do
     fi
 
     echo "I: Compile Kernel module for Intel ${DRIVER_NAME} driver"
-    mkdir -p ${DEBIAN_DIR}/lib/firmware ${DEBIAN_DIR}/usr/bin ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu
+    mkdir -p ${DEBIAN_DIR}/lib/firmware ${DEBIAN_DIR}/usr/bin ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu ${DEBIAN_DIR}/etc/init.d
     KERNEL_SOURCE_ROOT=${KERNEL_DIR} ./configure --enable-kapi
     make -j $(getconf _NPROCESSORS_ONLN) all
     make INSTALL_MOD_PATH=${DEBIAN_DIR} INSTALL_FW_PATH=${DEBIAN_DIR} \
         qat-driver-install
 
-    cp -a build/*.bin ${DEBIAN_DIR}/lib/firmware
-    cp -a build/*.so ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu
-    cp -a build/adf_ctl ${DEBIAN_DIR}/usr/bin
-    cp -a build/usdm_drv.ko ${DEBIAN_DIR}/lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/updates/drivers
+    cp build/*.bin ${DEBIAN_DIR}/lib/firmware
+    cp build/*.so ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu
+    cp build/qat_service ${DEBIAN_DIR}/etc/init.d
+    cp build/adf_ctl ${DEBIAN_DIR}/usr/bin
+    cp build/usdm_drv.ko ${DEBIAN_DIR}/lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/updates/drivers
     chmod 644 ${DEBIAN_DIR}/lib/firmware/*
+    chmod 755 ${DEBIAN_DIR}/etc/init.d/*
 
     mkdir -p $(dirname "${DEBIAN_CONTROL}")
     cat << EOF >${DEBIAN_CONTROL}
@@ -84,7 +86,6 @@ EOF
     # build Debian package
     echo "I: Building Debian package vyos-intel-${DRIVER_NAME}"
     dpkg-deb --build ${DEBIAN_DIR}
-
 
     echo "I: Cleanup ${DRIVER_NAME} source"
     cd ${CWD}
