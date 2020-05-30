@@ -17,8 +17,6 @@ for url in "${intel[@]}"
 do
     cd ${CWD}
 
-    # URL_SIMPLE does not contain the /download path
-    URL_SIMPLE="${url%/*}"
     DRIVER_FILE=$(basename ${url} | sed -e s/tar_0/tar/)
     DRIVER_DIR="${DRIVER_FILE%.tar.gz}"
     DRIVER_NAME="qat"
