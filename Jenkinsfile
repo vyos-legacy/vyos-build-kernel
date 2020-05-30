@@ -157,18 +157,6 @@ pipeline {
                         }
                     }
                 }
-                stage('Intel-QAT') {
-                    steps {
-                        dir('intel-qat') {
-                            checkout([$class: 'GitSCM',
-                                doGenerateSubmoduleConfigurations: false,
-                                extensions: [[$class: 'CleanCheckout']],
-                                branches: [[name: 'master' ]],
-                                userRemoteConfigs: [[url: 'https://github.com/vyos/vyos-qat.git']]])
-                        }
-                    }
-                }
-
             }
         }
         stage('Compile Kernel') {
