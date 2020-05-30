@@ -10,7 +10,7 @@ fi
 . ${KERNEL_VAR_FILE}
 
 declare -a intel=(
-    "https://01.org/sites/default/files/downloads/qat1.7.l.4.5.0-00034.tar.gz"
+    "https://01.org/sites/default/files/downloads/qat1.7.l.4.9.0-00008.tar_0.gz"
 )
 
 for url in "${intel[@]}"
@@ -19,7 +19,7 @@ do
 
     # URL_SIMPLE does not contain the /download path
     URL_SIMPLE="${url%/*}"
-    DRIVER_FILE=$(basename ${url})
+    DRIVER_FILE=$(basename ${url} | sed -e s/tar_0/tar/)
     DRIVER_DIR="${DRIVER_FILE%.tar.gz}"
     DRIVER_NAME="qat"
     DRIVER_VERSION=$(echo ${DRIVER_DIR} | awk -F${DRIVER_NAME} '{print $2}')
@@ -88,14 +88,14 @@ EOF
     dpkg-deb --build ${DEBIAN_DIR}
 
     echo "I: Cleanup ${DRIVER_NAME} source"
-    cd ${CWD}
-    if [ -e ${DRIVER_FILE} ]; then
-        rm -f ${DRIVER_FILE}
-    fi
-    if [ -d ${DRIVER_DIR} ]; then
-        rm -rf ${DRIVER_DIR}
-    fi
-    if [ -d ${DEBIAN_DIR} ]; then
-        rm -rf ${DEBIAN_DIR}
-    fi
+#    cd ${CWD}
+#    if [ -e ${DRIVER_FILE} ]; then
+#        rm -f ${DRIVER_FILE}
+#    fi
+#    if [ -d ${DRIVER_DIR} ]; then
+#        rm -rf ${DRIVER_DIR}
+#    fi
+#    if [ -d ${DEBIAN_DIR} ]; then
+#        rm -rf ${DEBIAN_DIR}
+#    fi
 done
