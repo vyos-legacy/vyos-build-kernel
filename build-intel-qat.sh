@@ -51,7 +51,7 @@ do
     fi
 
     echo "I: Compile Kernel module for Intel ${DRIVER_NAME} driver"
-    mkdir -p ${DEBIAN_DIR}/lib/firmware ${DEBIAN_DIR}/usr/bin ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu ${DEBIAN_DIR}/etc/init.d
+    mkdir -p ${DEBIAN_DIR}/lib/firmware ${DEBIAN_DIR}/usr/local/bin ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu ${DEBIAN_DIR}/etc/init.d
     KERNEL_SOURCE_ROOT=${KERNEL_DIR} ./configure --enable-kapi
     make -j $(getconf _NPROCESSORS_ONLN) all
     make INSTALL_MOD_PATH=${DEBIAN_DIR} INSTALL_FW_PATH=${DEBIAN_DIR} \
@@ -60,10 +60,10 @@ do
     cp build/*.bin ${DEBIAN_DIR}/lib/firmware
     cp build/*.so ${DEBIAN_DIR}/usr/lib/x86_64-linux-gnu
     cp build/qat_service ${DEBIAN_DIR}/etc/init.d
-    cp build/adf_ctl ${DEBIAN_DIR}/usr/bin
+    cp build/adf_ctl ${DEBIAN_DIR}/usr/local/bin
     cp build/usdm_drv.ko ${DEBIAN_DIR}/lib/modules/${KERNEL_VERSION}${KERNEL_SUFFIX}/updates/drivers
     chmod 644 ${DEBIAN_DIR}/lib/firmware/*
-    chmod 755 ${DEBIAN_DIR}/etc/init.d/*
+    chmod 755 ${DEBIAN_DIR}/etc/init.d/* ${DEBIAN_DIR}/usr/local/bin/*
 
     mkdir -p $(dirname "${DEBIAN_CONTROL}")
     cat << EOF >${DEBIAN_CONTROL}
