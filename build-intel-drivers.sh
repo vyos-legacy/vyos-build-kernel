@@ -10,12 +10,12 @@ fi
 . ${KERNEL_VAR_FILE}
 
 declare -a intel=(
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/ixgbe%20stable/5.6.5/ixgbe-5.6.5.tar.gz"
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/igb%20stable/5.3.5.42/igb-5.3.5.42.tar.gz"
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/i40e%20stable/2.11.21/i40e-2.11.21.tar.gz"
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/ixgbevf%20stable/4.6.3/ixgbevf-4.6.3.tar.gz"
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/i40evf%20stable/3.6.15/i40evf-3.6.15.tar.gz"
-    "https://astuteinternet.dl.sourceforge.net/project/e1000/iavf%20stable/3.9.3/iavf-3.9.3.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/ixgbe-5.7.1.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/igb-5.3.5.61.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/i40e-2.11.29.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/ixgbevf-4.7.1.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/i40evf-3.6.15.tar.gz"
+    "http://dev.packages.vyos.net/source-mirror/iavf-3.9.5.tar.gz"
 )
 
 for url in "${intel[@]}"
