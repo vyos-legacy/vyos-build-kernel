@@ -33,7 +33,7 @@ for FILE in $(${CWD}/list-required-firmware.py -k ${LINUX_SRC} -c ${CWD}/x86_64_
     make LOCALVERSION=${KERNEL_SUFFIX} ${FILE/.c/.i} > /dev/null 2>&1
 
     if [ "$?" == "0" ]; then
-        result+=( $(grep UNIQUE_ID_firmware ${FILE/.c/.i} | cut -d' ' -f12- | xargs printf "%s" | sed -e "s/;/ /") )
+        result+=( $(grep UNIQUE_ID_firmware ${FILE/.c/.i} | cut -d" " -f12- | xargs printf "%s" | sed -e "s/;/ /g") )
     fi
 done
 
@@ -62,7 +62,7 @@ for FW in ${result[@]}; do
     for FILE in ${res[@]}; do
         FW_DIR="${VYOS_FIRMWARE_DIR}/lib/firmware/$(dirname ${FILE})"
         mkdir -p ${FW_DIR}
-	echo "I: install firmware: ${FILE}"
+        echo "I: install firmware: ${FILE}"
         cp ${CWD}/linux-firmware/${FILE} ${FW_DIR}
     done
 done
