@@ -128,6 +128,18 @@ pipeline {
                         }
                     }
                 }
+                stage('Kernel Firmware') {
+                    steps {
+                        dir('linux-firmware') {
+                            checkout([$class: 'GitSCM',
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'CleanCheckout'],
+                                             [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]],
+                                branches: [[name: '20191022' ]],
+                                userRemoteConfigs: [[url: 'https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git']]])
+                        }
+                    }
+                }
                 stage('WireGuard') {
                     steps {
                         dir('wireguard') {
@@ -186,9 +198,14 @@ pipeline {
                        sh "./build-accel-ppp.sh"
                     }
                 }
-                stage('Intel-QAT') {
+                stage('Intel QuickAssist Technology') {
                     steps {
                         sh "./build-intel-qat.sh"
+                    }
+                }
+                stage('Linux Firmware') {
+                    steps {
+                        sh "./build-linux-firmware.sh"
                     }
                 }
             }

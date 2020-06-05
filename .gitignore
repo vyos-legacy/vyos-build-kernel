@@ -3,6 +3,7 @@
 /wireguard-linux-compat
 /accel-ppp
 /intel-qat
+/linux-firmware
 /qat*
 *.deb
 *.changes
@@ -15,5 +16,5 @@ igb-*/
 ixgbe-*/
 ixgbevf-*/
 vyos-intel-*/
-
+vyos-linux-firmware*/
 kernel-vars
