@@ -83,17 +83,17 @@ EOF
 
     # build Debian package
     echo "I: Building Debian package vyos-intel-${DRIVER_NAME}"
-    dpkg-deb --build ${DEBIAN_DIR}
+    fakeroot dpkg-deb --build ${DEBIAN_DIR}
 
     echo "I: Cleanup ${DRIVER_NAME} source"
-#    cd ${CWD}
-#    if [ -e ${DRIVER_FILE} ]; then
-#        rm -f ${DRIVER_FILE}
-#    fi
-#    if [ -d ${DRIVER_DIR} ]; then
-#        rm -rf ${DRIVER_DIR}
-#    fi
-#    if [ -d ${DEBIAN_DIR} ]; then
-#        rm -rf ${DEBIAN_DIR}
-#    fi
+    cd ${CWD}
+    if [ -e ${DRIVER_FILE} ]; then
+        rm -f ${DRIVER_FILE}
+    fi
+    if [ -d ${DRIVER_DIR} ]; then
+        rm -rf ${DRIVER_DIR}
+    fi
+    if [ -d ${DEBIAN_DIR} ]; then
+        rm -rf ${DEBIAN_DIR}
+    fi
 done

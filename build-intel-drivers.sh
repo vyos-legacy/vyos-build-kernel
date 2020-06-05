@@ -77,7 +77,7 @@ EOF
 
     # build Debian package
     echo "I: Building Debian package vyos-intel-${DRIVER_NAME}"
-    dpkg-deb --build ${DEBIAN_DIR}
+    fakeroot dpkg-deb --build ${DEBIAN_DIR}
 
 
     echo "I: Cleanup ${DRIVER_NAME} source"
