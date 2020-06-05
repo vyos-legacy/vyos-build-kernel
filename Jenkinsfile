@@ -176,11 +176,7 @@ pipeline {
                 sh "./build-kernel.sh"
             }
         }
-        stage('Intel Driver(s)') {
-            steps {
-                sh "./build-intel-drivers.sh"
-            }
-        }
+
         stage('Kernel Module(s)') {
             parallel {
                 stage('WireGuard') {
@@ -198,18 +194,27 @@ pipeline {
                        sh "./build-accel-ppp.sh"
                     }
                 }
+                stage('Intel Driver(s)') {
+                    steps {
+                        sh "./build-intel-drivers.sh"
+                    }
+                }
                 stage('Intel QuickAssist Technology') {
                     steps {
                         sh "./build-intel-qat.sh"
                     }
                 }
-                stage('Linux Firmware') {
-                    steps {
-                        sh "./build-linux-firmware.sh"
-                    }
-                }
             }
         }
+        // This stage should not be run in the parallel section as it will call "make"
+        // again on the kernel source and this could confuse other build systems
+        // like generating Intel or Accel-PPP drivers. Better safe then sorry!
+        stage('Linux Firmware') {
+            steps {
+                sh "./build-linux-firmware.sh"
+            }
+        }
+
     }
     post {
         cleanup {

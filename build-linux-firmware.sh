@@ -11,7 +11,7 @@
 CWD=$(pwd)
 LINUX_SRC="linux"
 LINUX_FIRMWARE="linux-firmware"
-result=()
+KERNEL_VAR_FILE=${CWD}/kernel-vars
 
 if [ ! -d ${LINUX_SRC} ]; then
     echo "Kernel source missing"
@@ -23,11 +23,14 @@ if [ ! -d ${LINUX_FIRMWARE} ]; then
     exit 1
 fi
 
+. ${KERNEL_VAR_FILE}
+
+result=()
 # Retrieve firmware blobs from source files
 for FILE in $(${CWD}/list-required-firmware.py -k ${LINUX_SRC} -c ${CWD}/x86_64_vyos_defconfig -s drivers/net -s drivers/usb); do
     cd ${CWD}/${LINUX_SRC}
     echo "I: determine required firmware blobs for: ${FILE}"
-    make ${FILE/.c/.i} > /dev/null 2>&1
+    make LOCALVERSION=${KERNEL_SUFFIX} ${FILE/.c/.i} > /dev/null 2>&1
 
     if [ "$?" == "0" ]; then
         result+=( $(grep UNIQUE_ID_firmware ${FILE/.c/.i} | cut -d' ' -f12- | xargs printf "%s" | sed -e "s/;/ /") )
