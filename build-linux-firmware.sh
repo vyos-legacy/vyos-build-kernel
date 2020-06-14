@@ -6,12 +6,15 @@
 #
 # All selected drivers are then precomfiled "make drivers/foo/bar.i" and we grep for
 # the magic word "UNIQUE_ID_firmware" which identifies firmware files.
-#
 
 CWD=$(pwd)
 LINUX_SRC="linux"
 LINUX_FIRMWARE="linux-firmware"
 KERNEL_VAR_FILE=${CWD}/kernel-vars
+
+# Some firmware files might not be easy to extract (e.g. Intel iwlwifi drivers)
+# thus we simply ammend them "manually"
+ADD_FW_FILES="iwlwifi*"
 
 if [ ! -d ${LINUX_SRC} ]; then
     echo "Kernel source missing"
@@ -65,6 +68,15 @@ for FW in ${result[@]}; do
         echo "I: install firmware: ${FILE}"
         cp ${CWD}/linux-firmware/${FILE} ${FW_DIR}
     done
+done
+
+# Install additional firmware files that could not be autodiscovered
+for FW in ${ADD_FW_FILES}
+do
+    FW_DIR="${VYOS_FIRMWARE_DIR}/lib/firmware/$(dirname ${FW})"
+    mkdir -p ${FW_DIR}
+    echo "I: install firmware: ${FW}"
+    cp  ${CWD}/linux-firmware/${FW} ${FW_DIR}
 done
 
 # Describe Debian package
