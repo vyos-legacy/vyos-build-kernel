@@ -1,0 +1,34 @@
+From: Andrey Jr. Melnikov <temnota.am@gmail.com>
+Date: Thu, 30 Jun 2016 14:04:20 +0300
+Subject: [PATCH] Fix overlayfs inotify interaction
+
+Fix overlayfs inotify interaction - use d_real_inode() helper
+to resolve real (underlying) inode. Without this inotify is not functional on
+overlayfs.
+
+---
+Runtime tested with inotifywait in monitor mode to confirm event generation.
+
+cd /tmp/ && mkdir dest upper lower work
+mount -t overlay none dest -o upperdir=upper/,lowerdir=lower/,workdir=work/
+while /bin/true; do echo test >>/tmp/dest/lower-data; sleep 5; done &
+inotifywait -m /tmp/dest/lower-data
+
+ fs/notify/inotify/inotify_user.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/notify/inotify/inotify_user.c b/fs/notify/inotify/inotify_user.c
+index b8d08d0..592ce16 100644
+--- a/fs/notify/inotify/inotify_user.c
++++ b/fs/notify/inotify/inotify_user.c
+@@ -742,7 +742,7 @@ SYSCALL_DEFINE3(inotify_add_watch, int, fd, const char __user *, pathname,
+ 		goto fput_and_out;
+ 
+ 	/* inode held in place by reference to path; group by fget on fd */
+-	inode = path.dentry->d_inode;
++	inode = d_real_inode(path.dentry);
+ 	group = f.file->private_data;
+ 
+ 	/* create/update an inode mark */
+-- 
+2.8.1
